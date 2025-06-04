@@ -1,13 +1,12 @@
 'use client';
 import Image from 'next/image';
-import logo from '@/public/logo.png';
+import logo from '@/public/logo.svg';
 
 export default function Header() {
   return (
-    <header className="flex justify-between items-center p-4 border-b bg-white shadow">
-      <div className="flex items-center gap-3">
-        <Image src={logo} alt="Logo Evolvi" width={32} height={32} />
-        <span className="text-xl font-bold text-blue-700">Evolvi Soluções</span>
+    <header className="flex justify-between items-center px-4 border-b bg-white shadow">
+      <div className="flex items-center">
+        <Image src={logo} alt="Logo Evolvi" width={180} height={60} />
       </div>
     </header>
   );

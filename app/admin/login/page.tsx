@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { login } from '@/lib/mockDB';
-import logo from '@/public/logo.png';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
