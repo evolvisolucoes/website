@@ -26,6 +26,7 @@ export default function ServicosPage() {
 	const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
 	const [showEmbed, setShowEmbed] = useState(false);
 	const [embedUrl, setEmbedUrl] = useState("");
+	const [embedServiceName, setEmbedServiceName] = useState("");
 
 	useEffect(() => {
 		const u = getUsuarioLogado();
@@ -36,6 +37,28 @@ export default function ServicosPage() {
 			setAgendamentos(getAgendamentosDoUsuario(u.id));
 		}
 	}, []);
+
+	// Fechar modal ao pressionar ESC
+	useEffect(() => {
+		const handleEsc = (event: KeyboardEvent) => {
+			if (event.key === 'Escape' && showEmbed) {
+				setShowEmbed(false);
+			}
+		};
+		
+		if (showEmbed) {
+			document.addEventListener('keydown', handleEsc);
+			// Previne scroll do body quando modal está aberto
+			document.body.style.overflow = 'hidden';
+		} else {
+			document.body.style.overflow = 'unset';
+		}
+
+		return () => {
+			document.removeEventListener('keydown', handleEsc);
+			document.body.style.overflow = 'unset';
+		};
+	}, [showEmbed]);
 
 	if (!usuario) return <p>Carregando...</p>;
 
@@ -51,9 +74,23 @@ export default function ServicosPage() {
 		return isBefore(dataExec, hoje);
 	});
 
-	const abrirServicoEmbedado = (url: string) => {
+	const abrirServicoEmbedado = (url: string, nome: string) => {
 		setEmbedUrl(url);
+		setEmbedServiceName(nome);
 		setShowEmbed(true);
+	};
+
+	const fecharEmbed = () => {
+		setShowEmbed(false);
+		setEmbedUrl("");
+		setEmbedServiceName("");
+	};
+
+	// Função para fechar ao clicar no backdrop
+	const handleBackdropClick = (e: React.MouseEvent) => {
+		if (e.target === e.currentTarget) {
+			fecharEmbed();
+		}
 	};
 
 	function agendamentoAtualDoServico(servicoId: string): Agendamento | undefined {
@@ -111,7 +148,7 @@ export default function ServicosPage() {
 						<h2 className="text-lg font-semibold text-blue-700">{s.nome}</h2>
 						<p className="text-sm text-gray-600">{s.descricao}</p>
 						<button
-							onClick={() => abrirServicoEmbedado(s.embedUrl)}
+							onClick={() => abrirServicoEmbedado(s.embedUrl, s.nome)}
 							className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
 						>
 							Abrir Serviço
@@ -160,21 +197,41 @@ export default function ServicosPage() {
 				/>
 			)}
 			
-			{/* Modal de serviço embedado */}
+			{/* Modal de serviço embedado - Melhorado */}
 			{showEmbed && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white w-full max-w-4xl h-[80vh] rounded shadow-lg relative">
-						<button
-							onClick={() => setShowEmbed(false)}
-							className="absolute top-2 right-2 text-gray-700 hover:text-red-600"
-						>
-							✕
-						</button>
-						<iframe
-							src={embedUrl}
-							className="w-full h-full rounded-b"
-							title="Conteúdo do Serviço"
-						/>
+				<div 
+					className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+					onClick={handleBackdropClick}
+				>
+					<div className="w-full max-w-6xl h-[90vh] rounded-lg shadow-2xl relative flex flex-col transform transition-all duration-300 ease-out overflow-hidden">
+						{/* Header do modal */}
+						<div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+							<div className="flex items-center space-x-3">
+								<div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+								<h3 className="text-lg font-semibold">{embedServiceName}</h3>
+							</div>
+							<div className="flex items-center space-x-2">
+								<span className="text-xs text-blue-200 hidden sm:block">Pressione ESC ou clique fora para fechar</span>
+								<button
+									onClick={fecharEmbed}
+									className="text-white hover:text-red-300 transition-colors duration-200 p-1 rounded-full hover:bg-white hover:bg-opacity-20"
+									title="Fechar (ESC)"
+								>
+									<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
+						</div>
+						
+						{/* Conteúdo do iframe */}
+						<div className="flex-1 min-h-0">
+							<iframe
+								src={embedUrl}
+								className="w-full h-full border-0 block"
+								title={`Conteúdo do Serviço: ${embedServiceName}`}
+							/>
+						</div>
 					</div>
 				</div>
 			)}

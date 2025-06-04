@@ -327,6 +327,6 @@ export const staticServices = [
     nome: 'Informações REINF',
     descricao: 'Serviço para consultar informações da REINF.',
     tipo: 'embed',
-    embedUrl: "https://gifted-socks-f1a.notion.site/ebd/675e177f73e14132b19344d3e55cee8e?v=c4dabefa8b634ad6b4e568e42142b480"
+    embedUrl: "https://conplusgestao.notion.site/ebd/675e177f73e14132b19344d3e55cee8e?v=c4dabefa8b634ad6b4e568e42142b480"
   },
 ];
