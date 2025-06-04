@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   getUsuarioLogado,
   alterarSenha,
@@ -10,29 +11,49 @@ import {
   removerEmpresa,
   getCertificadosDoUsuario,
   atualizarNomeCertificado,
+  Empresa,
+  Certificado,
 } from '@/lib/mockDB';
 import { InfoEditUsuario } from '@/components/InfoEditUsuario';
 
 export default function PaginaPerfilUsuario() {
-  const usuario = getUsuarioLogado();
-  const [empresas, setEmpresas] = useState(getEmpresasDoUsuario(usuario!.id));
-  const certificado = getCertificadosDoUsuario(usuario!.id)[0];
+  const router = useRouter();
+  const [usuario, setUsuario] = useState<ReturnType<typeof getUsuarioLogado> | null>(null);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [certificado, setCertificado] = useState<Certificado | null>(null);
 
   const [novaEmpresa, setNovaEmpresa] = useState({ nome: '', cnpj: '' });
 
+  useEffect(() => {
+    const user = getUsuarioLogado();
+    if (!user) {
+      router.push('/login');
+    } else {
+      setUsuario(user);
+      setEmpresas(getEmpresasDoUsuario(user.id));
+      const certs = getCertificadosDoUsuario(user.id);
+      if (certs.length > 0) setCertificado(certs[0]);
+    }
+  }, []);
+
   const handleAddEmpresa = () => {
-    if (novaEmpresa.nome && novaEmpresa.cnpj) {
-      adicionarEmpresa(usuario!.id, novaEmpresa.nome, novaEmpresa.cnpj);
-      setEmpresas(getEmpresasDoUsuario(usuario!.id));
+    if (novaEmpresa.nome && novaEmpresa.cnpj && usuario) {
+      adicionarEmpresa(usuario.id, novaEmpresa.nome, novaEmpresa.cnpj);
+      setEmpresas(getEmpresasDoUsuario(usuario.id));
       setNovaEmpresa({ nome: '', cnpj: '' });
     }
   };
 
   const handleRemover = (id: string) => {
-    removerEmpresa(id);
-    setEmpresas(getEmpresasDoUsuario(usuario!.id));
+    if (usuario) {
+      removerEmpresa(id);
+      setEmpresas(getEmpresasDoUsuario(usuario.id));
+    }
   };
 
+  if (!usuario) {
+    return <p>Carregando...</p>;
+  }
   return (
     <div className="space-y-8 max-w-3xl">
       <h1 className="text-2xl font-bold text-blue-700">Meu Perfil</h1>
