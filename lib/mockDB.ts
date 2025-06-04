@@ -93,16 +93,16 @@ export let faturas: Fatura[] = carregar('faturas', [
 ]);
 
 export let servicos: Servico[] = carregar('servicos', [
-	{ id: 1, user_id: 'joao', servico: 'Assinar XML', status: 'Sucesso', data: '2025-05-20' },
-	{ id: 2, user_id: 'joao', servico: 'Enviar DCTF', status: 'Erro', data: '2025-05-22' },
-	{ id: 3, user_id: 'maria', servico: 'Transmitir Reinf', status: 'Sucesso', data: '2025-05-21' },
+	{ id: 1, user_id: 'joao', servico: 'Consulta DET', status: 'Sucesso', data: '2025-05-20' },
+	{ id: 2, user_id: 'joao', servico: 'Verificar DAPI', status: 'Erro', data: '2025-05-22' },
+	{ id: 3, user_id: 'maria', servico: 'Automatizar PJF', status: 'Sucesso', data: '2025-05-21' },
 ]);
 
 export let agendamentos: Agendamento[] = carregar('agendamentos', [
-	{ id: 1, user_id: 'joao', servico_id: '1', servico_nome: 'Assinar XML', certificado_id: '', empresa_ids: [], data_execucao: '2025-03-02', status: 'concluido', arquivos_gerados: ['/mock/retorno_1_01.xml', '/mock/retorno_1_02.xml'], data_geracao: '2025-05-20' },
-	{ id: 2, user_id: 'joao', servico_id: '2', servico_nome: 'Enviar DCTF', certificado_id: '', empresa_ids: [], data_execucao: '2025-04-30', status: 'erro', arquivos_gerados: ['/mock/retorno_erro.xml'], data_geracao: '2025-05-22' },
-	{ id: 3, user_id: 'joao', servico_id: '1', servico_nome: 'Assinar XML', certificado_id: '', empresa_ids: [], data_execucao: '2025-05-10', status: 'pendente', arquivos_gerados: ['/mock/pendente.xml'], data_geracao: '2025-05-23' },
-	{ id: 4, user_id: 'maria', servico_id: '3', servico_nome: 'Transmitir Reinf', certificado_id: '', empresa_ids: [], data_execucao: '2025-05-20', status: 'concluido', arquivos_gerados: ['/mock/retorno_1_01.xml', '/mock/retorno_1_02.xml'], data_geracao: '2025-05-21' },
+	{ id: 1, user_id: 'joao', servico_id: '1', servico_nome: 'Consulta DET', certificado_id: '', empresa_ids: [], data_execucao: '2025-03-02', status: 'concluido', arquivos_gerados: ['/mock/retorno_1_01.xml', '/mock/retorno_1_02.xml'], data_geracao: '2025-05-20' },
+	{ id: 2, user_id: 'joao', servico_id: '2', servico_nome: 'Verificar DAPI', certificado_id: '', empresa_ids: [], data_execucao: '2025-04-30', status: 'erro', arquivos_gerados: ['/mock/retorno_erro.xml'], data_geracao: '2025-05-22' },
+	{ id: 3, user_id: 'joao', servico_id: '1', servico_nome: 'Consulta DET', certificado_id: '', empresa_ids: [], data_execucao: '2025-05-10', status: 'pendente', arquivos_gerados: ['/mock/pendente.xml'], data_geracao: '2025-05-23' },
+	{ id: 4, user_id: 'maria', servico_id: '3', servico_nome: 'Automatizar PJF', certificado_id: '', empresa_ids: [], data_execucao: '2025-05-20', status: 'concluido', arquivos_gerados: ['/mock/retorno_1_01.xml', '/mock/retorno_1_02.xml'], data_geracao: '2025-05-21' },
 ]);
 
 export const servicosDisponiveis = [
