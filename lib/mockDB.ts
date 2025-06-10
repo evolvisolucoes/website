@@ -168,14 +168,27 @@ export function getAgendamentosPorServico(userId: string, servicoId: string): Ag
 	return agendamentos.filter((a) => a.user_id === userId && a.servico_id === servicoId);
 }
 
-export function simularExecucaoServico(agendamentoId: number) {
-	const agendamento = agendamentos.find((a) => a.id === agendamentoId);
-	if (!agendamento) return;
-	agendamento.status = 'concluido';
-	agendamento.data_geracao = new Date().toISOString().split('T')[0];
-	agendamento.arquivos_gerados = [`/mock/retorno_${agendamento.id}_01.xml`, `/mock/retorno_${agendamento.id}_02.xml`];
-	salvar('agendamentos', agendamentos);
+export function simularExecucaoServico(id: number): void {
+  const index = agendamentos.findIndex((a) => a.id === id);
+  if (index !== -1) {
+    agendamentos[index].status = 'concluido';
+    agendamentos[index].data_geracao = new Date().toISOString().slice(0, 10);
+    agendamentos[index].arquivos_gerados = [
+      `/mock/retorno_${id}_1.xml`,
+      `/mock/retorno_${id}_2.xml`
+    ];
+    salvar('agendamentos', agendamentos);
+  }
 }
+
+// export function simularExecucaoServico(agendamentoId: number) {
+// 	const agendamento = agendamentos.find((a) => a.id === agendamentoId);
+// 	if (!agendamento) return;
+// 	agendamento.status = 'concluido';
+// 	agendamento.data_geracao = new Date().toISOString().split('T')[0];
+// 	agendamento.arquivos_gerados = [`/mock/retorno_${agendamento.id}_01.xml`, `/mock/retorno_${agendamento.id}_02.xml`];
+// 	salvar('agendamentos', agendamentos);
+// }
 
 export function alterarSenha(userId: string, novaSenha: string) {
 	const user = usuarios.find(u => u.id === userId);
@@ -239,65 +252,61 @@ export function getAgendamentosDoUsuario(userId: string) {
 let idAgendamentoAutoIncrement = 1000;
 
 export function adicionarAgendamento({
-	id,
-	user_id,
-	servico_id,
-	servico_nome,
-	certificado_id,
-	empresa_ids,
-	data_execucao,
-	forcar = false,
+  id,
+  user_id,
+  servico_id,
+  servico_nome,
+  certificado_id,
+  empresa_ids,
+  data_execucao,
+  forcar = false,
 }: {
-	id?: number; // novo parâmetro opcional
-	user_id: string;
-	servico_id: string;
-	servico_nome: string;
-	certificado_id: string;
-	empresa_ids: string[];
-	data_execucao: string;
-	forcar?: boolean;
+  id?: number;
+  user_id: string;
+  servico_id: string;
+  servico_nome: string;
+  certificado_id: string;
+  empresa_ids: string[];
+  data_execucao: string;
+  forcar?: boolean;
 }) {
-	const mes = data_execucao.slice(0, 7); // Ex: "2025-06"
+  const mes = data_execucao.slice(0, 7);
 
-	// Se for uma edição, removemos o agendamento anterior
-	if (id !== undefined) {
-		const index = agendamentos.findIndex((a) => a.id === id);
-		if (index !== -1) {
-			agendamentos.splice(index, 1);
-		}
-	}
+  if (id !== undefined) {
+    const index = agendamentos.findIndex((a) => a.id === id);
+    if (index !== -1) {
+      agendamentos.splice(index, 1);
+    }
+  }
 
-	// Verifica se já existe um agendamento no mesmo mês para o mesmo serviço
-	const existente = agendamentos.find(
-		(a) =>
-			a.user_id === user_id &&
-			a.servico_id === servico_id &&
-			a.data_execucao.slice(0, 7) === mes
-	);
+  const existente = agendamentos.find(
+    (a) =>
+      a.user_id === user_id &&
+      a.servico_id === servico_id &&
+      a.data_execucao.slice(0, 7) === mes
+  );
 
-	if (existente && !forcar) {
-		throw new Error('Já existe um agendamento deste serviço para este mês.');
-	}
+  if (existente && !forcar) {
+    throw new Error('Já existe um agendamento deste serviço para este mês.');
+  }
 
-	// Se estiver atualizando, mantém o mesmo id; senão, gera novo
-	const novoId = id !== undefined ? id : idAgendamentoAutoIncrement++;
+  const novoId = id !== undefined ? id : idAgendamentoAutoIncrement++;
 
-	agendamentos.push({
-		id: novoId,
-		user_id,
-		servico_id,
-		servico_nome,
-		certificado_id,
-		empresa_ids,
-		status: 'pendente',
-		data_execucao,
-		arquivos_gerados: [],
-		data_geracao: '',
-	});
+  agendamentos.push({
+    id: novoId,
+    user_id,
+    servico_id,
+    servico_nome,
+    certificado_id,
+    empresa_ids,
+    status: 'pendente',
+    data_execucao,
+    arquivos_gerados: [],
+    data_geracao: '',
+  });
 
-	salvar('agendamentos', agendamentos);
+  salvar('agendamentos', agendamentos);
 }
-
 
 export function setDiaAgendamento(userId: string, dia: number) {
 	const user = usuarios.find(u => u.id === userId);
@@ -330,3 +339,17 @@ export const staticServices = [
     embedUrl: "https://conplusgestao.notion.site/ebd/675e177f73e14132b19344d3e55cee8e?v=c4dabefa8b634ad6b4e568e42142b480"
   },
 ];
+
+export function getServicoDisponivelPorId(id: string) {
+  return servicosDisponiveis.find((s) => s.id === id);
+}
+
+export function getSlugServicoPorId(id: string): string {
+  return `/user/servicos/${id}`;
+}
+
+export function getProximoAgendamentoServico(userId: string, servicoId: string): Agendamento | undefined {
+  return agendamentos
+	.filter(a => a.user_id === userId && a.servico_id === servicoId && a.status === 'pendente')
+	.sort((a, b) => a.data_execucao.localeCompare(b.data_execucao))[0];
+}
