@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 			<div className="flex min-h-screen">
 				<AdminSidebar />
 				<div className="flex-1 flex flex-col">
-					<Header />
+					<Header title="Contabilidade Automatizada" />
 					<main className="flex-1 p-8 bg-gray-50">{children}</main>
 					<Footer />
 				</div>
