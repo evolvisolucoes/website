@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
   getUsuarioLogado,
   alterarSenha,
@@ -11,78 +10,71 @@ import {
   removerEmpresa,
   getCertificadosDoUsuario,
   atualizarNomeCertificado,
-  Empresa,
-  Certificado,
+  importarEmpresasCSV,
 } from '@/lib/mockDB';
 import { InfoEditUsuario } from '@/components/InfoEditUsuario';
 
 export default function PaginaPerfilUsuario() {
-  const router = useRouter();
-  const [usuario, setUsuario] = useState<ReturnType<typeof getUsuarioLogado> | null>(null);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [certificado, setCertificado] = useState<Certificado | null>(null);
-
+  const usuario = getUsuarioLogado();
+  const [empresas, setEmpresas] = useState(getEmpresasDoUsuario(usuario!.id));
+  const certificado = getCertificadosDoUsuario(usuario!.id)[0];
   const [novaEmpresa, setNovaEmpresa] = useState({ nome: '', cnpj: '' });
 
-  useEffect(() => {
-    const user = getUsuarioLogado();
-    if (!user) {
-      router.push('/login');
-    } else {
-      setUsuario(user);
-      setEmpresas(getEmpresasDoUsuario(user.id));
-      const certs = getCertificadosDoUsuario(user.id);
-      if (certs.length > 0) setCertificado(certs[0]);
-    }
-  }, []);
-
   const handleAddEmpresa = () => {
-    if (novaEmpresa.nome && novaEmpresa.cnpj && usuario) {
-      adicionarEmpresa(usuario.id, novaEmpresa.nome, novaEmpresa.cnpj);
-      setEmpresas(getEmpresasDoUsuario(usuario.id));
+    if (novaEmpresa.nome && novaEmpresa.cnpj) {
+      adicionarEmpresa(usuario!.id, novaEmpresa.nome, novaEmpresa.cnpj);
+      setEmpresas(getEmpresasDoUsuario(usuario!.id));
       setNovaEmpresa({ nome: '', cnpj: '' });
     }
   };
 
   const handleRemover = (id: string) => {
-    if (usuario) {
-      removerEmpresa(id);
-      setEmpresas(getEmpresasDoUsuario(usuario.id));
-    }
+    removerEmpresa(id);
+    setEmpresas(getEmpresasDoUsuario(usuario!.id));
   };
 
-  if (!usuario) {
-    return <p>Carregando...</p>;
-  }
-  return (
-    <div className="space-y-8 max-w-3xl">
-      <h1 className="text-2xl font-bold text-blue-700">Meu Perfil</h1>
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      {/* Dados Pessoais */}
-      <section>
-        <h2 className="text-lg font-semibold mb-2">👤 Dados Pessoais</h2>
-        <InfoEditUsuario
-          label="Nome"
-          valor={usuario?.nome || ''}
-          onSalvar={(novo) => {
-            setNomeUsuario(usuario!.id, novo);
-            alert('Nome atualizado!');
-          }}
-        />
-        <InfoEditUsuario
-          label="Senha"
-          valor="********"
-          tipo="password"
-          onSalvar={(nova) => {
-            alterarSenha(usuario!.id, nova);
-            alert('Senha atualizada!');
-          }}
-        />
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result as string;
+      importarEmpresasCSV(usuario!.id, text);
+      setEmpresas(getEmpresasDoUsuario(usuario!.id));
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-blue-700 border-b pb-2">Meu Perfil</h1>
+
+      <section className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">👤 Dados Pessoais</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <InfoEditUsuario
+            label="Nome"
+            valor={usuario?.nome || ''}
+            onSalvar={(novo) => {
+              setNomeUsuario(usuario!.id, novo);
+              alert('Nome atualizado!');
+            }}
+          />
+          <InfoEditUsuario
+            label="Senha"
+            valor="********"
+            tipo="password"
+            onSalvar={(nova) => {
+              alterarSenha(usuario!.id, nova);
+              alert('Senha atualizada!');
+            }}
+          />
+        </div>
       </section>
 
-      {/* Certificado */}
-      <section>
-        <h2 className="text-lg font-semibold mb-2">🔐 Certificado Digital</h2>
+      <section className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">🔐 Certificado Digital</h2>
         <InfoEditUsuario
           label="Identificador"
           valor={certificado?.id ?? 'Sem certificado'}
@@ -93,36 +85,44 @@ export default function PaginaPerfilUsuario() {
         />
       </section>
 
-      {/* Empresas */}
-      <section>
-        <h2 className="text-lg font-semibold mb-2">🏢 Empresas Vinculadas</h2>
-        <table className="w-full text-sm border border-gray-300 rounded overflow-hidden mb-2">
-          <thead className="bg-gray-100 text-gray-600">
-            <tr>
-              <th className="p-2 text-left">Nome</th>
-              <th className="p-2 text-left">CNPJ</th>
-              <th className="p-2">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {empresas.map((e) => (
-              <tr key={e.id} className="border-t">
-                <td className="p-2">{e.nome}</td>
-                <td className="p-2">{e.cnpj}</td>
-                <td className="p-2 text-center">
-                  <button
-                    onClick={() => handleRemover(e.id)}
-                    className="text-red-600 text-xs underline"
-                  >
-                    Remover
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="bg-white rounded-xl shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">🏢 Empresas Vinculadas</h2>
+          <label className="text-sm text-blue-700 cursor-pointer hover:underline">
+            Importar CSV
+            <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+          </label>
+        </div>
 
-        <div className="flex gap-2">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border border-gray-300 rounded mb-4">
+            <thead className="bg-gray-100 text-gray-600">
+              <tr>
+                <th className="p-2 text-left">Nome</th>
+                <th className="p-2 text-left">CNPJ</th>
+                <th className="p-2">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {empresas.map((e) => (
+                <tr key={e.id} className="border-t">
+                  <td className="p-2">{e.nome}</td>
+                  <td className="p-2">{e.cnpj}</td>
+                  <td className="p-2 text-center">
+                    <button
+                      onClick={() => handleRemover(e.id)}
+                      className="text-red-600 text-xs underline"
+                    >
+                      Remover
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             value={novaEmpresa.nome}

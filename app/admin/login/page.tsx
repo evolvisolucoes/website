@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import logo from '@/public/logo.svg';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { login } from '@/lib/mockDB';
@@ -27,41 +28,54 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center w-full px-4">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white border-l-4 border-blue-700 p-8 rounded shadow-md w-full max-w-md space-y-6 relative"
-      >
-        <div className="flex flex-col items-center space-y-2">
-          <h1 className="text-xl font-bold text-blue-700">Acesso Administrativo</h1>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl overflow-hidden">
+        <div className="flex">
+          {/* Borda azul lateral */}
+          <div className="w-2 bg-blue-600" />
+
+          {/* Conteúdo do Card */}
+          <div className="flex-1 p-8">
+            <div className="flex justify-center mb-6">
+              <Image src={logo} alt="Logo Evolvi" width={160} height={40} />
+            </div>
+
+            <h1 className="text-xl font-semibold text-center mb-4 text-gray-800">
+              Acesso Administrativo
+            </h1>
+
+            {erro && (
+              <p className="text-red-500 text-sm text-center mb-2">{erro}</p>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input
+                type="email"
+                placeholder="E-mail"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Senha"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                required
+              />
+
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors"
+              >
+                Entrar
+              </button>
+            </form>
+          </div>
         </div>
-
-        {erro && <p className="text-red-500 text-sm text-center">{erro}</p>}
-
-        <div className="space-y-3">
-          <input
-            type="email"
-            placeholder="E-mail"
-            className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Senha"
-            className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-        >
-          Entrar
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
