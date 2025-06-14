@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   getUsuarioLogado,
   alterarSenha,
@@ -11,40 +11,71 @@ import {
   getCertificadosDoUsuario,
   atualizarNomeCertificado,
   importarEmpresasCSV,
+  Usuario,
+  Empresa,
+  Certificado
 } from '@/lib/mockDB';
 import { InfoEditUsuario } from '@/components/InfoEditUsuario';
 
 export default function PaginaPerfilUsuario() {
-  const usuario = getUsuarioLogado();
-  const [empresas, setEmpresas] = useState(getEmpresasDoUsuario(usuario!.id));
-  const certificado = getCertificadosDoUsuario(usuario!.id)[0];
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [certificado, setCertificado] = useState<Certificado | null>(null);
+  const [loading, setLoading] = useState(true);
   const [novaEmpresa, setNovaEmpresa] = useState({ nome: '', cnpj: '' });
 
+  useEffect(() => {
+    const usuarioLogado = getUsuarioLogado();
+    setUsuario(usuarioLogado);
+  }, []);
+
+  useEffect(() => {
+    if (usuario) {
+      setEmpresas(getEmpresasDoUsuario(usuario.id));
+      setCertificado(getCertificadosDoUsuario(usuario.id)[0] || null);
+    }
+    setLoading(false);
+  }, [usuario]);
+
+  const refreshEmpresas = () => {
+    if (usuario) {
+      setEmpresas(getEmpresasDoUsuario(usuario.id));
+    }
+  };
+  
   const handleAddEmpresa = () => {
-    if (novaEmpresa.nome && novaEmpresa.cnpj) {
-      adicionarEmpresa(usuario!.id, novaEmpresa.nome, novaEmpresa.cnpj);
-      setEmpresas(getEmpresasDoUsuario(usuario!.id));
+    if (novaEmpresa.nome && novaEmpresa.cnpj && usuario) {
+      adicionarEmpresa(usuario.id, novaEmpresa.nome, novaEmpresa.cnpj);
+      refreshEmpresas();
       setNovaEmpresa({ nome: '', cnpj: '' });
     }
   };
 
   const handleRemover = (id: string) => {
     removerEmpresa(id);
-    setEmpresas(getEmpresasDoUsuario(usuario!.id));
+    refreshEmpresas();
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !usuario) return;
 
     const reader = new FileReader();
     reader.onload = () => {
       const text = reader.result as string;
-      importarEmpresasCSV(usuario!.id, text);
-      setEmpresas(getEmpresasDoUsuario(usuario!.id));
+      importarEmpresasCSV(usuario.id, text);
+      refreshEmpresas();
     };
     reader.readAsText(file);
   };
+
+  if (loading) {
+    return <div className="p-6 text-center font-semibold">Carregando perfil...</div>;
+  }
+
+  if (!usuario) {
+    return <div className="p-6 text-center text-red-600 font-semibold">Usuário não encontrado. Por favor, faça o login.</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -55,9 +86,9 @@ export default function PaginaPerfilUsuario() {
         <div className="grid sm:grid-cols-2 gap-4">
           <InfoEditUsuario
             label="Nome"
-            valor={usuario?.nome || ''}
+            valor={usuario.nome}
             onSalvar={(novo) => {
-              setNomeUsuario(usuario!.id, novo);
+              setNomeUsuario(usuario.id, novo);
               alert('Nome atualizado!');
             }}
           />
@@ -66,7 +97,7 @@ export default function PaginaPerfilUsuario() {
             valor="********"
             tipo="password"
             onSalvar={(nova) => {
-              alterarSenha(usuario!.id, nova);
+              alterarSenha(usuario.id, nova);
               alert('Senha atualizada!');
             }}
           />
@@ -79,7 +110,7 @@ export default function PaginaPerfilUsuario() {
           label="Identificador"
           valor={certificado?.id ?? 'Sem certificado'}
           onSalvar={(novoNome) => {
-            atualizarNomeCertificado(usuario!.id, novoNome);
+            atualizarNomeCertificado(usuario.id, novoNome);
             alert('Certificado atualizado!');
           }}
         />
