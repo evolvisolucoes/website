@@ -1,9 +1,8 @@
-// app/layout.tsx
 import "styles/globals.css";
 import { ReactNode } from "react";
 
 export const metadata = {
-  title: "Plataforma SaaS",
+  title: "Evolvi",
   description: "Gerencie certificados, empresas e serviços com facilidade.",
 };
 

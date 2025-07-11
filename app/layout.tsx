@@ -4,7 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata = {
-	title: "Plataforma SaaS",
+	title: "Evolvi",
 	description: "Gerencie certificados, empresas e serviços com facilidade.",
 };
 
