@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { supabaseBrowser } from '@/lib/supabaseService';
+import { supabaseBrowser } from '@/lib/supabaseClient';
 
 export default function CertificadosForm() {
   const [nome, setNome] = useState('');
