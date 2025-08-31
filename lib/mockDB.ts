@@ -52,6 +52,20 @@ export type Agendamento = {
 	data_geracao?: string;
 };
 
+export type ServicosDisponiveis = {
+	id: string;
+	nome: string;
+	descricao: string;
+};
+
+export type ServicosEstaticos = {
+	id: string;
+	nome: string;
+	descricao: string;
+	tipo: 'embed';
+	embedUrl: string;
+};
+
 function salvar<T>(chave: string, dados: T[]) {
 	if (typeof localStorage !== 'undefined') {
 		localStorage.setItem(chave, JSON.stringify(dados));
@@ -105,11 +119,21 @@ export let agendamentos: Agendamento[] = carregar('agendamentos', [
 	{ id: 4, user_id: 'maria', servico_id: '3', servico_nome: 'Automatizar PJF', certificado_id: '', empresa_ids: [], data_execucao: '2025-05-20', status: 'concluido', arquivos_gerados: ['/mock/retorno_1_01.xml', '/mock/retorno_1_02.xml'], data_geracao: '2025-05-21' },
 ]);
 
-export const servicosDisponiveis = [
+export let servicosDisponiveis: ServicosDisponiveis[] =  carregar('servicosDisponiveis', [
 	{ id: '1', nome: 'Consulta DET', descricao: 'Automatizar a consulta ao DET.' },
 	{ id: '2', nome: 'Verificar DAPI', descricao: 'Verificar desobrigação DAPI.' },
 	{ id: '3', nome: 'Automatizar PJF', descricao: 'Aceite de notas, download do Livro Fiscal e XML de notas na PJF.' }
-];
+]);
+
+export let servicosEstaticos: ServicosEstaticos[] = carregar('servicosEstaticos', [
+	{
+		id: 'servico-embedado-1',
+		nome: 'Informações REINF',
+		descricao: 'Serviço para consultar informações da REINF.',
+		tipo: 'embed',
+		embedUrl: "https://conplusgestao.notion.site/ebd/675e177f73e14132b19344d3e55cee8e?v=c4dabefa8b634ad6b4e568e42142b480"
+	},
+]);
 
 export function login(email: string, senha: string): Usuario | null {
 	const usuario = usuarios.find((u) => u.email === email && u.senha === senha) || null;
@@ -180,15 +204,6 @@ export function simularExecucaoServico(id: number): void {
     salvar('agendamentos', agendamentos);
   }
 }
-
-// export function simularExecucaoServico(agendamentoId: number) {
-// 	const agendamento = agendamentos.find((a) => a.id === agendamentoId);
-// 	if (!agendamento) return;
-// 	agendamento.status = 'concluido';
-// 	agendamento.data_geracao = new Date().toISOString().split('T')[0];
-// 	agendamento.arquivos_gerados = [`/mock/retorno_${agendamento.id}_01.xml`, `/mock/retorno_${agendamento.id}_02.xml`];
-// 	salvar('agendamentos', agendamentos);
-// }
 
 export function alterarSenha(userId: string, novaSenha: string) {
 	const user = usuarios.find(u => u.id === userId);
@@ -330,15 +345,7 @@ export function getCertificadoPorIds(ids: string[]) {
 	return certificados.filter((e) => ids.includes(e.id));
 }
 
-export const staticServices = [
-  {
-    id: 'servico-embedado-1',
-    nome: 'Informações REINF',
-    descricao: 'Serviço para consultar informações da REINF.',
-    tipo: 'embed',
-    embedUrl: "https://conplusgestao.notion.site/ebd/675e177f73e14132b19344d3e55cee8e?v=c4dabefa8b634ad6b4e568e42142b480"
-  },
-];
+
 
 export function getServicoDisponivelPorId(id: string) {
   return servicosDisponiveis.find((s) => s.id === id);
