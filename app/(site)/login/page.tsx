@@ -4,7 +4,7 @@ import Image from 'next/image';
 import logo from '@/public/logo.svg';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { login } from '@/lib/mockDB';
+import { login, getUsuarioLogado } from '@/lib/supabaseService';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,13 +12,19 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const role = document.cookie.split('; ').find(c => c.startsWith('auth_user_role='))?.split('=')[1];
-    if (role === 'user') router.push('/user');
-  }, []);
+    const checkUserRole = async () => { 
+      const user = await getUsuarioLogado();
+      if (user && user.role === 'user') {
+        router.push('/user');
+      }
+    };
+    checkUserRole();
+  }, [router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = login(email, senha);
+    const user = await login(email, senha);
+
     if (user && user.role === 'user') {
       router.push('/user');
     }

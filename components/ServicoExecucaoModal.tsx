@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Empresa, Certificado, Agendamento } from '@/lib/mockDB';
+import { Empresa, Certificado, Agendamento } from '@/types_db';
 
 type Props = {
 	servico: any;

@@ -1,48 +1,32 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabaseBrowser } from '@/lib/supabaseClient';
-import { agendarServico, getFaturasDoUsuario, getUsuarioPorId, getUsuarioLogado, getCertificadosDoUsuario, getEmpresasDoUsuario } from '@/lib/mockDB';
+import {
+  getFaturasDoUsuario,
+  getUsuarioLogado,
+  getCertificadosDoUsuario,
+  getEmpresasDoUsuario,
+  adicionarAgendamento,
+} from '@/lib/supabaseService';
+import { Usuario, Certificado, Empresa } from '@/types_db';
 
 export default function AgendamentoForm({ servicoId }: { servicoId: string }) {
-	const [certificados, setCertificados] = useState<any[]>([]);
-	const [empresas, setEmpresas] = useState<any[]>([]);
+	const [certificados, setCertificados] = useState<Certificado[]>([]);
+	const [empresas, setEmpresas] = useState<Empresa[]>([]);
 	const [certificadoId, setCertificadoId] = useState('');
 	const [empresaIds, setEmpresaIds] = useState<string[]>([]);
 	const [dataExecucao, setDataExecucao] = useState('');
 	const [bloqueado, setBloqueado] = useState(false);
-	const [usuario, setUsuario] = useState<any>(null);
-
-	//   useEffect(() => {
-	//     async function fetchData() {
-	//       const user = await supabaseBrowser.auth.getUser();
-	//       const { data: certs } = await supabaseBrowser.from('certificados').select('*').eq('user_id', user.data.user?.id);
-	//       const { data: emps } = await supabaseBrowser.from('empresas').select('*').eq('user_id', user.data.user?.id);
-	//       setCertificados(certs || []);
-	//       setEmpresas(emps || []);
-	//     }
-	//     fetchData();
-	//   }, []);
-
-	//   const handleSubmit = async (e: React.FormEvent) => {
-	//     e.preventDefault();
-	//     const user = await supabaseBrowser.auth.getUser();
-	//     await supabaseBrowser.from('agendamentos').insert({
-	//       user_id: user.data.user?.id,
-	//       servico_id: servicoId,
-	//       certificado_id: certificadoId,
-	//       empresa_ids: empresaIds,
-	//       data_execucao: dataExecucao,
-	//       status: 'pendente',
-	//       arquivos_gerados: null,
-	//     });
-	//   };
+	const [usuario, setUsuario] = useState<Usuario | null>(null);
 
 	useEffect(() => {
 		async function fetchData() {
-			const user = getUsuarioLogado();
-			if (!user) return;
+			const user = await getUsuarioLogado();
+			if (!user) {
+                setBloqueado(true);
+                return;
+            }
 
-			const faturas = getFaturasDoUsuario(user.id);
+			const faturas = await getFaturasDoUsuario(user.id);
 			const inadimplente = faturas.some(f => f.status === 'Pendente');
 
 			if (!user.ativo || inadimplente) {
@@ -52,37 +36,41 @@ export default function AgendamentoForm({ servicoId }: { servicoId: string }) {
 			}
 
 			setUsuario(user);
-			setCertificados(getCertificadosDoUsuario(user.id));
-			setEmpresas(getEmpresasDoUsuario(user.id));
+			setCertificados(await getCertificadosDoUsuario(user.id));
+			setEmpresas(await getEmpresasDoUsuario(user.id));
 		}
 
 		fetchData();
 	}, []);
 
-
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		const user = await supabaseBrowser.auth.getUser();
 
-		if (!user.data.user?.id) return;
+        if (!usuario || !usuario.id) {
+            alert('Usuário não logado.');
+            return;
+        }
 
-		agendarServico({
-			user_id: user.data.user.id,
-			servico_id: servicoId,
-			servico_nome: servicoId,
-			certificado_id: certificadoId,
-			empresa_ids: empresaIds,
-			data_execucao: dataExecucao,
-			status: 'pendente',
-			arquivos_gerados: [],
-		});
+		try {
+            await adicionarAgendamento({
+                user_id: usuario.id,
+                servico_id: servicoId,
+                servico_nome: servicoId, // Aqui você pode querer buscar o nome real do serviço
+                certificado_id: certificadoId,
+                empresa_ids: empresaIds,
+                data_execucao: dataExecucao,
+                // status e arquivos_gerados são definidos por padrão na função do serviço
+            });
 
-		alert('Serviço agendado!');
-		setCertificadoId('');
-		setEmpresaIds([]);
-		setDataExecucao('');
+            alert('Serviço agendado!');
+            setCertificadoId('');
+            setEmpresaIds([]);
+            setDataExecucao('');
+		} catch (error: any) {
+            alert(`Erro ao agendar serviço: ${error.message}`);
+            console.error('Erro ao agendar serviço:', error);
+        }
 	};
-
 
 	return (<>
 		{bloqueado && (
@@ -93,25 +81,44 @@ export default function AgendamentoForm({ servicoId }: { servicoId: string }) {
 
 		{!bloqueado && (
 			<form onSubmit={handleSubmit} className="space-y-4">
-				<label>Certificado</label>
-				<select value={certificadoId} onChange={(e) => setCertificadoId(e.target.value)} required>
+				<label className="block mb-1 font-medium">Certificado</label>
+				<select
+                    value={certificadoId}
+                    onChange={(e) => setCertificadoId(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                >
 					<option value="">Selecione</option>
 					{certificados.map((c) => (
-						<option key={c.id} value={c.id}>{c.nome}</option>
+						<option key={c.id} value={c.id}>{c.tipo} ({c.id})</option>
 					))}
 				</select>
 
-				<label>Empresas</label>
-				<select multiple value={empresaIds} onChange={(e) => setEmpresaIds(Array.from(e.target.selectedOptions, o => o.value))} required>
+				<label className="block mb-1 font-medium">Empresas</label>
+				<select
+                    multiple
+                    value={empresaIds}
+                    onChange={(e) => setEmpresaIds(Array.from(e.target.selectedOptions, o => o.value))}
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                >
 					{empresas.map((e) => (
 						<option key={e.id} value={e.id}>{e.nome} ({e.cnpj})</option>
 					))}
 				</select>
 
-				<label>Data de Execução</label>
-				<input type="date" value={dataExecucao} onChange={(e) => setDataExecucao(e.target.value)} required />
+				<label className="block mb-1 font-medium">Data de Execução</label>
+				<input
+                    type="date"
+                    value={dataExecucao}
+                    onChange={(e) => setDataExecucao(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                />
 
-				<button type="submit">Agendar Serviço</button>
+				<button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Agendar Serviço
+                </button>
 			</form>
 		)}</>
 	);

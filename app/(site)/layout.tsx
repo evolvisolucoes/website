@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { AuthProvider } from './auth-context';
-import SiteLayout from '@/components/SiteLayout'; // supondo que você colocou o layout em components
+import { AuthProvider } from '@/context/AuthContext';
+import SiteLayout from '@/components/SiteLayout';
 
 export default function SiteLayoutWrapper({ children }: { children: ReactNode }) {
   return (

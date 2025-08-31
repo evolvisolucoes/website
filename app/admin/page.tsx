@@ -1,26 +1,43 @@
+// app\admin\page
 'use client';
-
 import {
-  usuarios,
-  faturas,
+  getUsuarios,
+  getFaturas,
   getFaturasDoUsuario,
-} from '@/lib/mockDB';
+} from '@/lib/supabaseService';
+import { useEffect, useState } from 'react';
+import { Usuario, Fatura } from 'types_db';
 
 export default function AdminDashboard() {
-  const totalUsuarios = usuarios.length;
-  const usuariosAtivos = usuarios.filter((u) => u.ativo).length;
-  const usuariosInativos = totalUsuarios - usuariosAtivos;
+  const [allUsuarios, setAllUsuarios] = useState<Usuario[]>([]);
+  const [allFaturas, setAllFaturas] = useState<Fatura[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const totalFaturado = faturas
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setAllUsuarios(await getUsuarios());
+      setAllFaturas(await getFaturas());
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <p>Carregando dados do painel administrativo...</p>;
+
+  const totalUsuarios = allUsuarios.length;
+  const usuariosAtivos = allUsuarios.filter((u) => u.ativo).length;
+  const usuariosInativos = totalUsuarios - usuariosAtivos;
+  const totalFaturado = allFaturas
     .filter((f) => f.status === 'Pago')
     .reduce((acc, f) => acc + f.valor, 0);
-
-  const faturasPendentes = faturas.filter((f) => f.status === 'Pendente');
+  const faturasPendentes = allFaturas.filter((f) => f.status === 'Pendente');
   const totalPendentes = faturasPendentes.length;
 
-  const inadimplentes = usuarios.filter((u) =>
-    getFaturasDoUsuario(u.id).some((f) => f.status === 'Pendente')
-  );
+  const inadimplentes = allUsuarios.filter((u) => {
+    const userFaturas = allFaturas.filter(f => f.user_id === u.id);
+    return userFaturas.some(f => f.status === 'Pendente');
+  });
 
   return (
     <div className="space-y-6">

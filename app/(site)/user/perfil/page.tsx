@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getUsuarioLogado,
   alterarSenha,
@@ -10,12 +10,10 @@ import {
   removerEmpresa,
   getCertificadosDoUsuario,
   atualizarNomeCertificado,
-  importarEmpresasCSV,
-  Usuario,
-  Empresa,
-  Certificado
-} from '@/lib/mockDB';
+  importarEmpresasCSV
+} from '@/lib/supabaseService';
 import { InfoEditUsuario } from '@/components/InfoEditUsuario';
+import { Usuario, Empresa, Certificado } from 'types_db';
 
 export default function PaginaPerfilUsuario() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
@@ -24,35 +22,49 @@ export default function PaginaPerfilUsuario() {
   const [loading, setLoading] = useState(true);
   const [novaEmpresa, setNovaEmpresa] = useState({ nome: '', cnpj: '' });
 
-  useEffect(() => {
-    const usuarioLogado = getUsuarioLogado();
+  const fetchUserData = useCallback(async () => {
+    setLoading(true);
+    const usuarioLogado = await getUsuarioLogado();
     setUsuario(usuarioLogado);
+
+    if (usuarioLogado) {
+      setEmpresas(await getEmpresasDoUsuario(usuarioLogado.id));
+      const certs = await getCertificadosDoUsuario(usuarioLogado.id);
+      setCertificado(certs[0] || null);
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
+
+  const refreshEmpresas = useCallback(async () => {
     if (usuario) {
-      setEmpresas(getEmpresasDoUsuario(usuario.id));
-      setCertificado(getCertificadosDoUsuario(usuario.id)[0] || null);
+      setEmpresas(await getEmpresasDoUsuario(usuario.id));
     }
-    setLoading(false);
   }, [usuario]);
 
-  const refreshEmpresas = () => {
-    if (usuario) {
-      setEmpresas(getEmpresasDoUsuario(usuario.id));
-    }
-  };
-  
-  const handleAddEmpresa = () => {
+  const handleAddEmpresa = async () => {
     if (novaEmpresa.nome && novaEmpresa.cnpj && usuario) {
-      adicionarEmpresa(usuario.id, novaEmpresa.nome, novaEmpresa.cnpj);
-      refreshEmpresas();
-      setNovaEmpresa({ nome: '', cnpj: '' });
+      const result = await adicionarEmpresa(
+        usuario.id,
+        novaEmpresa.nome,
+        novaEmpresa.cnpj
+      );
+      if (result) {
+        alert('Empresa adicionada!');
+        refreshEmpresas();
+        setNovaEmpresa({ nome: '', cnpj: '' });
+      } else {
+        alert('Erro ao adicionar empresa. Verifique o console.');
+      }
     }
   };
 
-  const handleRemover = (id: string) => {
-    removerEmpresa(id);
+  const handleRemover = async (id: string) => {
+    await removerEmpresa(id);
+    alert('Empresa removida!');
     refreshEmpresas();
   };
 
@@ -61,25 +73,39 @@ export default function PaginaPerfilUsuario() {
     if (!file || !usuario) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const text = reader.result as string;
-      importarEmpresasCSV(usuario.id, text);
-      refreshEmpresas();
+      try {
+        await importarEmpresasCSV(usuario.id, text);
+        alert('Empresas importadas com sucesso!');
+        refreshEmpresas();
+      } catch (error) {
+        alert('Erro ao importar empresas do CSV. Verifique o console.');
+        console.error(error);
+      }
     };
     reader.readAsText(file);
   };
 
   if (loading) {
-    return <div className="p-6 text-center font-semibold">Carregando perfil...</div>;
+    return (
+      <div className="p-6 text-center font-semibold">Carregando perfil...</div>
+    );
   }
 
   if (!usuario) {
-    return <div className="p-6 text-center text-red-600 font-semibold">Usuário não encontrado. Por favor, faça o login.</div>;
+    return (
+      <div className="p-6 text-center text-red-600 font-semibold">
+        Usuário não encontrado. Por favor, faça o login.
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-blue-700 border-b pb-2">Meu Perfil</h1>
+      <h1 className="text-3xl font-bold text-blue-700 border-b pb-2">
+        Meu Perfil
+      </h1>
 
       <section className="bg-white rounded-xl shadow p-6">
         <h2 className="text-xl font-semibold mb-4">👤 Dados Pessoais</h2>
@@ -87,8 +113,9 @@ export default function PaginaPerfilUsuario() {
           <InfoEditUsuario
             label="Nome"
             valor={usuario.nome}
-            onSalvar={(novo) => {
-              setNomeUsuario(usuario.id, novo);
+            onSalvar={async (novo) => {
+              await setNomeUsuario(usuario.id, novo);
+              setUsuario((prev) => (prev ? { ...prev, nome: novo } : null));
               alert('Nome atualizado!');
             }}
           />
@@ -96,8 +123,8 @@ export default function PaginaPerfilUsuario() {
             label="Senha"
             valor="********"
             tipo="password"
-            onSalvar={(nova) => {
-              alterarSenha(usuario.id, nova);
+            onSalvar={async (nova) => {
+              await alterarSenha(usuario.id, nova);
               alert('Senha atualizada!');
             }}
           />
@@ -109,9 +136,16 @@ export default function PaginaPerfilUsuario() {
         <InfoEditUsuario
           label="Identificador"
           valor={certificado?.id ?? 'Sem certificado'}
-          onSalvar={(novoNome) => {
-            atualizarNomeCertificado(usuario.id, novoNome);
-            alert('Certificado atualizado!');
+          onSalvar={async (novoNome) => {
+            if (certificado) {
+              await atualizarNomeCertificado(usuario.id, novoNome);
+              setCertificado((prev) =>
+                prev ? { ...prev, id: novoNome } : null
+              );
+              alert('Certificado atualizado!');
+            } else {
+              alert('Não há certificado para atualizar. Adicione um primeiro.');
+            }
           }}
         />
       </section>
@@ -121,7 +155,12 @@ export default function PaginaPerfilUsuario() {
           <h2 className="text-xl font-semibold">🏢 Empresas Vinculadas</h2>
           <label className="text-sm text-blue-700 cursor-pointer hover:underline">
             Importar CSV
-            <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              className="hidden"
+            />
           </label>
         </div>
 
@@ -157,14 +196,18 @@ export default function PaginaPerfilUsuario() {
           <input
             type="text"
             value={novaEmpresa.nome}
-            onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
+            onChange={(e) =>
+              setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })
+            }
             placeholder="Nome da empresa"
             className="border px-2 py-1 rounded w-full"
           />
           <input
             type="text"
             value={novaEmpresa.cnpj}
-            onChange={(e) => setNovaEmpresa({ ...novaEmpresa, cnpj: e.target.value })}
+            onChange={(e) =>
+              setNovaEmpresa({ ...novaEmpresa, cnpj: e.target.value })
+            }
             placeholder="CNPJ"
             className="border px-2 py-1 rounded w-full"
           />

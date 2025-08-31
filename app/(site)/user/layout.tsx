@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import UserSidebar from '@/components/UserSidebar';
-import { AuthProvider } from '../auth-context';
+import { AuthProvider } from '@/context/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 

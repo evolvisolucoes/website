@@ -1,7 +1,5 @@
-// app/user/servicos/[slug]/page.tsx
 'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
   getUsuarioLogado,
@@ -11,10 +9,8 @@ import {
   getCertificadosDoUsuario,
   simularExecucaoServico,
   adicionarAgendamento,
-  Empresa,
-  Certificado,
-  Agendamento,
-} from '@/lib/mockDB';
+} from '@/lib/supabaseService';
+import { Empresa, Certificado, Agendamento, ServicosDisponiveis} from '@/types_db'; 
 import { format } from 'date-fns';
 
 export default function ServicoDetalhePage() {
@@ -28,20 +24,29 @@ export default function ServicoDetalhePage() {
   const [dataExecucao, setDataExecucao] = useState('');
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [servico, setServico] = useState<ServicosDisponiveis | undefined>(undefined);
 
-  const servico = getServicoDisponivelPorId(slug as string);
-
-  useEffect(() => {
-    const user = getUsuarioLogado();
+  const fetchServicoData = useCallback(async (userId: string, serviceSlug: string) => {
+    setLoading(true);
+    const user = await getUsuarioLogado();
     if (user) {
       setUsuario(user);
-      setEmpresas(getEmpresasDoUsuario(user.id));
-      setCertificados(getCertificadosDoUsuario(user.id));
-      setAgendamentos(getAgendamentosPorServico(user.id, slug as string));
+      setEmpresas(await getEmpresasDoUsuario(user.id));
+      setCertificados(await getCertificadosDoUsuario(user.id));
+      setAgendamentos(await getAgendamentosPorServico(user.id, serviceSlug));
+      setServico(await getServicoDisponivelPorId(serviceSlug));
     }
-  }, [slug]);
+    setLoading(false);
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (slug) {
+        fetchServicoData(usuario?.id || '', slug as string);
+    }
+  }, [slug, fetchServicoData, usuario?.id]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
     setSucesso('');
@@ -51,28 +56,38 @@ export default function ServicoDetalhePage() {
       return;
     }
 
+    if (!usuario || !servico) {
+        setErro('Dados do usuário ou serviço não carregados.');
+        return;
+    }
+
     try {
-      adicionarAgendamento({
+      await adicionarAgendamento({
         user_id: usuario.id,
         servico_id: slug as string,
-        servico_nome: servico?.nome || 'Serviço',
+        servico_nome: servico.nome || 'Serviço',
         certificado_id: certificadoId,
         empresa_ids: empresasSelecionadas,
         data_execucao: dataExecucao,
       });
-      setAgendamentos(getAgendamentosPorServico(usuario.id, slug as string));
+      setAgendamentos(await getAgendamentosPorServico(usuario.id, slug as string));
       setSucesso('Agendamento criado com sucesso!');
+      setCertificadoId('');
+      setEmpresasSelecionadas([]);
+      setDataExecucao('');
+
     } catch (e: any) {
       setErro(e.message);
     }
   };
 
-  const simular = (id: number) => {
-    simularExecucaoServico(id);
-    setAgendamentos(getAgendamentosPorServico(usuario.id, slug as string));
+  const simular = async (id: number) => {
+    if (!usuario) return;
+    await simularExecucaoServico(id);
+    setAgendamentos(await getAgendamentosPorServico(usuario.id, slug as string));
   };
 
-  if (!usuario || !servico) return <p>Carregando...</p>;
+  if (loading || !servico) return <p>Carregando...</p>;
 
   return (
     <div className="space-y-8">
@@ -125,7 +140,7 @@ export default function ServicoDetalhePage() {
         {erro && <p className="text-red-600 text-sm">{erro}</p>}
         {sucesso && <p className="text-green-600 text-sm">{sucesso}</p>}
 
-        <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
           Agendar Serviço
         </button>
       </form>

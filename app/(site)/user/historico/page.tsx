@@ -1,30 +1,79 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getUsuarioLogado,
   getAgendamentosDoUsuario,
   getEmpresasPorIds,
   getCertificadoPorIds,
-} from '@/lib/mockDB';
+  simularExecucaoServico,
+} from '@/lib/supabaseService';
+import { Empresa, Certificado, Usuario, Agendamento } from '@/types_db';
 
 export default function HistoricoPage() {
-  const [agendamentos, setAgendamentos] = useState<any[]>([]);
-  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'concluido'>('todos');
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'concluido' | 'erro'>('todos');
   const [preview, setPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [usuarioId, setUsuarioId] = useState<string | null>(null);
+
+  const [empresasCache, setEmpresasCache] = useState<Map<string, Empresa>>(new Map());
+  const [certificadosCache, setCertificadosCache] = useState<Map<string, Certificado>>(new Map());
+
+
+  const fetchHistoricoData = useCallback(async (userId: string) => {
+    setLoading(true);
+    const fetchedAgendamentos = await getAgendamentosDoUsuario(userId);
+    setAgendamentos(fetchedAgendamentos);
+
+    const allEmpresaIds = Array.from(new Set(fetchedAgendamentos.flatMap(a => a.empresa_ids || [])));
+    const allCertificadoIds = Array.from(new Set(fetchedAgendamentos.map(a => a.certificado_id).filter(Boolean)));
+
+    const fetchedEmpresas = await getEmpresasPorIds(allEmpresaIds);
+    const fetchedCertificados = await getCertificadoPorIds(allCertificadoIds);
+
+    const empMap = new Map<string, Empresa>();
+    fetchedEmpresas.forEach(emp => empMap.set(emp.id, emp));
+    setEmpresasCache(empMap);
+
+    const certMap = new Map<string, Certificado>();
+    fetchedCertificados.forEach(cert => certMap.set(cert.id, cert));
+    setCertificadosCache(certMap);
+
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    const user = getUsuarioLogado();
-    if (user) {
-      const dados = getAgendamentosDoUsuario(user.id);
-      console.log('Agendamentos carregados:', dados);
-      setAgendamentos(dados);
-    }
-  }, []);
+    const init = async () => {
+      const user = await getUsuarioLogado();
+      if (user) {
+        setUsuarioId(user.id);
+        await fetchHistoricoData(user.id);
+      } else {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [fetchHistoricoData]);
 
   const agsFiltrados = agendamentos.filter((a) =>
     filtroStatus === 'todos' ? true : a.status === filtroStatus
   );
+
+  const handleReexecutar = async (agendamentoId: number) => {
+    if (usuarioId) {
+      await simularExecucaoServico(agendamentoId);
+      await fetchHistoricoData(usuarioId);
+      alert(`Serviço reexecutado (simulado) para o agendamento ID: ${agendamentoId}`);
+    }
+  };
+
+  if (loading) {
+    return <p className="text-sm text-gray-500">Carregando histórico...</p>;
+  }
+  if (!usuarioId) {
+      return <p className="text-sm text-red-500">Faça login para ver o histórico.</p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -41,6 +90,7 @@ export default function HistoricoPage() {
           <option value="todos">Todos</option>
           <option value="pendente">Pendente</option>
           <option value="concluido">Concluído</option>
+          <option value="erro">Erro</option>
         </select>
       </div>
 
@@ -51,30 +101,28 @@ export default function HistoricoPage() {
         <table className="w-full text-sm border mt-4 bg-white rounded shadow">
           <thead className="bg-gray-100">
             <tr>
-              <th className="text-left p-2">Serviço</th>
-              <th className="text-left p-2">Empresas</th>
+              <th className="p-2 text-left">Serviço</th>
+              <th className="p-2 text-left">Empresas</th>
               <th className="text-left p-2">Certificado</th>
-              <th className="text-left p-2">Data</th>
-              <th className="text-left p-2">Status</th>
-              <th className="text-left p-2">Arquivos / Ações</th>
+              <th className="p-2 text-left">Data</th>
+              <th className="p-2 text-left">Status</th>
+              <th className="p-2 text-left">Arquivos / Ações</th>
             </tr>
           </thead>
           <tbody>
             {agsFiltrados.map((a) => {
-              const empresasObjs = getEmpresasPorIds(a.empresa_ids || []);
-              const empresas = empresasObjs.length > 0 ? empresasObjs.map((e: any) => e?.nome || '—') : ['—'];
-              const certificados = getCertificadoPorIds([a.certificado_id]);
-              const certificado = certificados.length > 0 ? certificados[0] : null;
+              const empresasNomes = a.empresa_ids?.map(id => empresasCache.get(id)?.nome || '—').filter(Boolean).join(', ') || '—';
+              const certificadoObj = certificadosCache.get(a.certificado_id);
               const arquivos = a.arquivos_gerados || [];
 
               return (
                 <tr key={a.id} className="border-t hover:bg-gray-50">
                   <td className="p-2 font-medium text-blue-700">{a.servico_nome || '—'}</td>
-                  <td className="p-2 text-xs">{empresas.join(', ') || '—'}</td>
-                  <td className="p-2 text-xs">{certificado?.id || '—'}</td>
+                  <td className="p-2 text-xs">{empresasNomes}</td>
+                  <td className="p-2 text-xs">{certificadoObj?.id || '—'}</td>
                   <td className="p-2 text-xs">{a.data_execucao || a.data_geracao || '—'}</td>
                   <td className="p-2 capitalize text-xs">
-                    <span className={`px-2 py-0.5 rounded ${a.status === 'concluido' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                    <span className={`px-2 py-0.5 rounded ${a.status === 'concluido' ? 'bg-green-100 text-green-700' : a.status === 'erro' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
                       {a.status}
                     </span>
                   </td>
@@ -98,10 +146,7 @@ export default function HistoricoPage() {
                       <p className="text-gray-400">Nenhum arquivo</p>
                     )}
                     <button
-                      onClick={() => {
-                        // Simular reexecução
-                        alert(`Reexecutando o serviço: ${a.servico_nome}`);
-                      }}
+                      onClick={() => handleReexecutar(a.id)}
                       className="text-xs text-orange-600 underline mt-2 block"
                     >
                       🔁 Reexecutar

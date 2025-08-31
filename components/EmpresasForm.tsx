@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { supabaseBrowser } from '@/lib/supabaseClient';
+import { supabaseBrowser } from '@/lib/supabaseService';
 
 export default function EmpresasForm() {
   const [nome, setNome] = useState('');

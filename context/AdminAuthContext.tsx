@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { logoutUsuario } from '@/lib/mockDB';
+import { logoutUsuario } from '@/lib/supabaseService';
 
 type AdminAuthContextType = {
   isAdminLogged: boolean;

@@ -1,44 +1,75 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
-	agendamentos,
+	getAgendamentos,
 	getUsuarioPorId,
 	getEmpresasPorIds,
-	certificados,
+	getCertificados,
 	simularExecucaoServico,
-} from '@/lib/mockDB';
+} from '@/lib/supabaseService';
+import { Agendamento, Usuario, Empresa, Certificado } from '@/types_db';
 
 export default function AdminServicosPage() {
 	type StatusFiltro = 'todos' | 'pendente' | 'concluido' | 'erro';
 
-	const [lista, setLista] = useState<any[]>([]);
+	const [lista, setLista] = useState<Agendamento[]>([]);
 	const [filtro, setFiltro] = useState<StatusFiltro>('todos');
 	const [busca, setBusca] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    const [usuariosCache, setUsuariosCache] = useState<Map<string, Usuario>>(new Map());
+    const [empresasCache, setEmpresasCache] = useState<Map<string, Empresa>>(new Map());
+    const [certificadosCache, setCertificadosCache] = useState<Map<string, Certificado>>(new Map());
+
+
+    const fetchDataAndPopulateCache = useCallback(async () => {
+        setLoading(true);
+        const fetchedAgendamentos = await getAgendamentos();
+        setLista(fetchedAgendamentos);
+
+        const userIds = Array.from(new Set(fetchedAgendamentos.map(a => a.user_id)));
+        const usersData = await Promise.all(userIds.map(id => getUsuarioPorId(id)));
+        const userMap = new Map<string, Usuario>();
+        usersData.forEach(user => { if (user) userMap.set(user.id, user); });
+        setUsuariosCache(userMap);
+
+        const empresaIds = Array.from(new Set(fetchedAgendamentos.flatMap(a => a.empresa_ids || [])));
+        const empresasData = await getEmpresasPorIds(empresaIds);
+        const empresaMap = new Map<string, Empresa>();
+        empresasData.forEach(emp => { if (emp) empresaMap.set(emp.id, emp); });
+        setEmpresasCache(empresaMap);
+
+        const certsData = await getCertificados();
+        const certMap = new Map<string, Certificado>();
+        certsData.forEach(cert => { if (cert) certMap.set(cert.id, cert); });
+        setCertificadosCache(certMap);
+
+        setLoading(false);
+    }, []);
+
 
 	useEffect(() => {
-		setLista(filtrarAgendamentos(filtro));
-	}, [filtro]);
+		fetchDataAndPopulateCache();
+	}, [fetchDataAndPopulateCache, filtro, busca]);
 
-	const filtrarAgendamentos = (status: typeof filtro) => {
-		if (status === 'todos') return agendamentos;
-		return agendamentos.filter((a) => {
-			const matchStatus = a.status === status;
-			const user = getUsuarioPorId(a.user_id);
-			const matchBusca =
-				!busca ||
-				a.servico_nome.toLowerCase().includes(busca.toLowerCase()) ||
-				user?.nome?.toLowerCase().includes(busca.toLowerCase());
+    const agendamentosFiltrados = lista.filter((a) => {
+        const matchStatus = filtro === 'todos' ? true : a.status === filtro;
+        const user = usuariosCache.get(a.user_id);
+        const matchBusca =
+            !busca ||
+            a.servico_nome.toLowerCase().includes(busca.toLowerCase()) ||
+            user?.nome?.toLowerCase().includes(busca.toLowerCase());
 
-			return matchStatus && matchBusca;
-		});
+        return matchStatus && matchBusca;
+    });
 
+	const handleExecutar = async (id: number) => {
+		await simularExecucaoServico(id);
+		await fetchDataAndPopulateCache();
 	};
 
-	const handleExecutar = (id: number) => {
-		simularExecucaoServico(id);
-		setLista(filtrarAgendamentos(filtro));
-	};
+    if (loading) return <p>Carregando gestão de serviços...</p>;
 
 	return (
 		<div className="space-y-6">
@@ -50,7 +81,7 @@ export default function AdminServicosPage() {
 				<select
 					className="border px-2 py-1 rounded"
 					value={filtro}
-					onChange={(e) => setFiltro(e.target.value as any)}
+					onChange={(e) => setFiltro(e.target.value as StatusFiltro)}
 				>
 					<option value="todos">Todos</option>
 					<option value="pendente">Pendentes</option>
@@ -81,21 +112,21 @@ export default function AdminServicosPage() {
 					</tr>
 				</thead>
 				<tbody>
-					{lista.length === 0 ? (
+					{agendamentosFiltrados.length === 0 ? (
 						<tr>
 							<td colSpan={7} className="p-4 text-center text-gray-500">Nenhum serviço encontrado.</td>
 						</tr>
 					) : (
-						lista.map((a) => {
-							const user = getUsuarioPorId(a.user_id);
-							const emp = getEmpresasPorIds(a.empresa_ids);
-							const cert = certificados.find(c => c.id === a.certificado_id);
+						agendamentosFiltrados.map((a) => {
+							const user = usuariosCache.get(a.user_id);
+							const empNomes = a.empresa_ids?.map(id => empresasCache.get(id)?.nome || '').filter(Boolean).join(', ') || '—';
+							const cert = certificadosCache.get(a.certificado_id);
 
 							return (
 								<tr key={a.id} className="border-t">
 									<td className="p-2">{a.servico_nome}</td>
-									<td className="p-2">{user?.nome}</td>
-									<td className="p-2">{emp.map(e => e.nome).join(', ')}</td>
+									<td className="p-2">{user?.nome || '—'}</td>
+									<td className="p-2">{empNomes}</td>
 									<td className="p-2">{cert?.id || '—'}</td>
 									<td className="p-2">{a.data_execucao || a.data_geracao || '—'}</td>
 									<td className="p-2 capitalize">{a.status}</td>

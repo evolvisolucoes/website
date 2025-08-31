@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { logoutUsuario } from '@/lib/mockDB';
+import { logoutUsuario } from '@/types_db';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Image from 'next/image';

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import logo from '@/public/logo.svg';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { login } from '@/lib/mockDB';
+import { login } from '@/lib/supabaseService';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -17,9 +17,11 @@ export default function AdminLoginPage() {
     if (role === 'admin') router.push('/admin');
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = login(email, senha);
+    setErro('');
+    const user = await login(email, senha);
+
     if (user && user.role === 'admin') {
       router.push('/admin');
     } else {

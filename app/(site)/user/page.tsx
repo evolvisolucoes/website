@@ -1,3 +1,4 @@
+// app\(site)\user\page
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,60 +8,48 @@ import {
   getUsuarioLogado,
   getAgendamentosDoUsuario,
   getFaturasDoUsuario,
-} from '@/lib/mockDB';
-
-type Agendamento = {
-  status: string;
-  arquivos_gerados?: string[];
-  data_geracao?: string;
-  servico_nome: string;
-};
-
-type Fatura = {
-  id: string;
-  valor: number;
-  status: 'pendente' | 'paga';
-  vencimento?: string;
-};
-
-type Usuario = {
-  id: string;
-  nome: string;
-};
+} from '@/lib/supabaseService';
+import { Usuario, Agendamento, Fatura } from '@/types_db';
 
 export default function PainelUsuario() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [faturaAtiva, setFaturaAtiva] = useState<Fatura | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = getUsuarioLogado();
-    if (user) {
-      setUsuario(user);
-      setAgendamentos(getAgendamentosDoUsuario(user.id));
+    const fetchData = async () => {
+      setLoading(true);
+      const user = await getUsuarioLogado();
+      if (user) {
+        setUsuario(user);
+        setAgendamentos(await getAgendamentosDoUsuario(user.id));
 
-      const faturas = getFaturasDoUsuario(user.id);
-      const ultimaPagaRaw = [...faturas]
-        .filter((f) => f.status === 'Pago')
-        .sort(
-          (a, b) =>
-            new Date(b.vencimento || '').getTime() -
-            new Date(a.vencimento || '').getTime()
-        )[0];
+        const faturas = await getFaturasDoUsuario(user.id);
+        const ultimaPagaRaw = [...faturas]
+          .filter((f) => f.status === 'Pago')
+          .sort(
+            (a, b) =>
+              new Date(b.vencimento || '').getTime() -
+              new Date(a.vencimento || '').getTime()
+          )[0];
 
-      const ultimaPaga: Fatura | null = ultimaPagaRaw
-        ? {
-            ...ultimaPagaRaw,
-            id: String(ultimaPagaRaw.id),
-            status: ultimaPagaRaw.status === 'Pago' ? 'paga' : 'pendente',
-          }
-        : null;
+        const ultimaPaga: Fatura | null = ultimaPagaRaw
+          ? {
+              ...ultimaPagaRaw,
+              id: ultimaPagaRaw.id,
+              status: ultimaPagaRaw.status,
+            }
+          : null;
 
-      setFaturaAtiva(ultimaPaga);
-    }
+        setFaturaAtiva(ultimaPaga);
+      }
+      setLoading(false);
+    };
+    fetchData();
   }, []);
 
-  if (!usuario) {
+  if (loading || !usuario) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <p className="text-gray-500">Carregando informações...</p>
@@ -76,13 +65,11 @@ export default function PainelUsuario() {
     (acc, a) => acc + (a.arquivos_gerados?.length || 0),
     0
   );
-
   const ultimo = [...concluidos].sort(
     (a, b) =>
       new Date(b.data_geracao || '').getTime() -
       new Date(a.data_geracao || '').getTime()
   )[0];
-
   const formatarData = (data?: string) => {
     if (!data) return '—';
     return new Date(data).toLocaleDateString('pt-BR', {
@@ -179,11 +166,13 @@ export default function PainelUsuario() {
               </span>
             </p>
             <p>
-              <strong>Pago em:</strong> {formatarData(faturaAtiva.vencimento)}
+              {faturaAtiva.status === 'Pago' ?
+              (<strong>Pago em:</strong>) :
+              (<strong>Vencimento:</strong>)} {formatarData(faturaAtiva.vencimento)}
             </p>
             <p>
               <strong>Status:</strong>{' '}
-              <span className="text-green-600 font-medium uppercase">
+              <span className={`${faturaAtiva.status === 'Pago' ? 'text-green-600' : 'text-orange-600'} font-medium uppercase`}>
                 {faturaAtiva.status}
               </span>
             </p>
