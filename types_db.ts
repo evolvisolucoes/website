@@ -56,6 +56,7 @@ export type ServicosDisponiveis = {
 	id: string;
 	nome: string;
 	descricao: string;
+	tipo: 'agendavel';
 };
 
 export type ServicosEstaticos = {
@@ -65,3 +66,5 @@ export type ServicosEstaticos = {
 	tipo: 'embed';
 	embedUrl: string;
 };
+
+export type ServicoDetalhado = ServicosDisponiveis | ServicosEstaticos;

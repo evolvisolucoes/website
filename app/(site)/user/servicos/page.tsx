@@ -1,55 +1,39 @@
-// app\(site)\user\servicos\page
 // app/user/servicos/page.tsx
 'use client';
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+// MODIFICAÇÃO: Importe a nova função unificada e o tipo correto
 import {
   getUsuarioLogado,
-  getServicosDisponiveis,
-  getAgendamentosDoUsuario,
+  getTodosOsServicos,
   getSlugServicoPorId,
   getProximoAgendamentoServico,
 } from '@/lib/supabaseService';
 import { format } from 'date-fns';
-import {Agendamento, ServicosDisponiveis} from 'types_db'
+// MODIFICAÇÃO: Importe o tipo Agendamento e o novo tipo unificado ServicoDetalhado
+import { Agendamento, ServicoDetalhado } from 'types_db';
 
-export default function ServicosPage() {
-  const [usuario, setUsuario] = useState<any>(null);
-  const [servicosDisponiveisState, setServicosDisponiveisState] = useState<ServicosDisponiveis[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const u = await getUsuarioLogado();
-      if (u) {
-        setUsuario(u);
-        setServicosDisponiveisState(await getServicosDisponiveis());
-      }
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
-
-  if (loading || !usuario) return <p>Carregando...</p>;
-
+// Componente para o card de serviço estático (sem informações de agendamento)
+function ServicoCardEstatico({ servico }: { servico: ServicoDetalhado }) {
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-blue-700">📦 Serviços Disponíveis</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {servicosDisponiveisState.map((s) => {
-          return (
-            <ServicoCardComAgendamento key={s.id} servico={s} userId={usuario.id} />
-          );
-        })}
+    <div className="bg-white p-4 rounded shadow border flex flex-col justify-between">
+      <div>
+        <h2 className="text-lg font-semibold text-blue-700">{servico.nome}</h2>
+        <p className="text-sm text-gray-600 mb-4">{servico.descricao}</p>
       </div>
+      <Link
+          href={getSlugServicoPorId(servico.id)}
+          className="inline-block mt-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-start"
+      >
+          Acessar
+      </Link>
     </div>
   );
 }
 
-function ServicoCardComAgendamento({ servico, userId }: { servico: ServicosDisponiveis; userId: string }) {
+// Componente para o card de serviço agendável (código que você já tinha)
+function ServicoCardComAgendamento({ servico, userId }: { servico: ServicoDetalhado; userId: string }) {
     const [agendamento, setAgendamento] = useState<Agendamento | undefined>(undefined);
     const [loadingAgendamento, setLoadingAgendamento] = useState(true);
 
@@ -65,27 +49,69 @@ function ServicoCardComAgendamento({ servico, userId }: { servico: ServicosDispo
 
 
     return (
-        <div className="bg-white p-4 rounded shadow border">
-            <h2 className="text-lg font-semibold text-blue-700">{servico.nome}</h2>
-            <p className="text-sm text-gray-600">{servico.descricao}</p>
+        <div className="bg-white p-4 rounded shadow border flex flex-col justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-blue-700">{servico.nome}</h2>
+              <p className="text-sm text-gray-600">{servico.descricao}</p>
 
-            {loadingAgendamento ? (
-                <p className="text-sm text-gray-500 mt-2">Buscando agendamento...</p>
-            ) : agendamento ? (
-                <p className="text-sm text-green-700 mt-2">
-                    🔄 Próximo agendamento:{' '}
-                    <strong>{format(new Date(agendamento.data_execucao), 'dd/MM/yyyy')}</strong>
-                </p>
-            ) : (
-                <p className="text-sm text-gray-500 mt-2">Sem agendamento futuro</p>
-            )}
+              {loadingAgendamento ? (
+                  <p className="text-sm text-gray-500 mt-2">Buscando agendamento...</p>
+              ) : agendamento ? (
+                  <p className="text-sm text-green-700 mt-2">
+                      🔄 Próximo agendamento:{' '}
+                      <strong>{format(new Date(agendamento.data_execucao), 'dd/MM/yyyy')}</strong>
+                  </p>
+              ) : (
+                  <p className="text-sm text-gray-500 mt-2">Sem agendamento futuro</p>
+              )}
+            </div>
 
             <Link
                 href={getSlugServicoPorId(servico.id)}
-                className="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                className="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-start"
             >
                 Acessar
             </Link>
         </div>
     );
+}
+
+export default function ServicosPage() {
+  const [usuario, setUsuario] = useState<any>(null);
+  // MODIFICAÇÃO: O estado agora usa o tipo unificado e foi renomeado para clareza
+  const [servicosState, setServicosState] = useState<ServicoDetalhado[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const u = await getUsuarioLogado();
+      if (u) {
+        setUsuario(u);
+        // MODIFICAÇÃO: Chama a nova função que busca TODOS os serviços
+        setServicosState(await getTodosOsServicos());
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  if (loading || !usuario) return <p>Carregando...</p>;
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-blue-700">📦 Serviços Disponíveis</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* MODIFICAÇÃO: Lógica para renderizar o card correto com base no tipo de serviço */}
+        {servicosState.map((s) => {
+          if (s.tipo === 'embed') {
+            return <ServicoCardEstatico key={s.id} servico={s} />;
+          } else {
+            return <ServicoCardComAgendamento key={s.id} servico={s} userId={usuario.id} />;
+          }
+        })}
+      </div>
+    </div>
+  );
 }

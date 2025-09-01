@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Usuario, Empresa, Certificado, Fatura, Servico, Agendamento, ServicosDisponiveis, ServicosEstaticos } from 'types_db';
+import { Usuario, Empresa, Certificado, Fatura, Servico, Agendamento, ServicosDisponiveis, ServicosEstaticos, ServicoDetalhado } from 'types_db';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -366,6 +366,76 @@ export async function getServicosEstaticos(): Promise<ServicosEstaticos[]> {
         return [];
     }
     return data as ServicosEstaticos[];
+}
+
+export async function getServicoPorId(id: string): Promise<ServicoDetalhado | undefined> {
+    // Primeiro, tenta buscar na tabela de serviços agendáveis
+    const { data: servicoAgendavel, error: errorAgendavel } = await supabase
+        .from('servicos_disponiveis')
+        .select('*')
+        .eq('id', id)
+        .single();
+    
+    if (servicoAgendavel) {
+        return { ...servicoAgendavel, tipo: 'agendavel' } as ServicosDisponiveis;
+    }
+
+    // Se não encontrar, busca na tabela de serviços estáticos
+    const { data: servicoEstatico, error: errorEstatico } = await supabase
+        .from('servicos_estaticos')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (servicoEstatico) {
+        return servicoEstatico as ServicosEstaticos; // O tipo 'embed' já vem do banco
+    }
+
+    if (errorAgendavel && errorEstatico) {
+      console.error('Erro ao buscar serviço:', { errorAgendavel, errorEstatico });
+    }
+    
+    return undefined;
+}
+
+export async function getTodosOsServicos(): Promise<ServicoDetalhado[]> {
+    // Busca os serviços agendáveis
+    const { data: agendaveis, error: errAgendaveis } = await supabase
+        .from('servicos_disponiveis')
+        .select('*');
+
+    // Busca os serviços estáticos
+    const { data: estaticos, error: errEstaticos } = await supabase
+        .from('servicos_estaticos')
+        .select('*');
+
+    // Tratamento de erros
+    if (errAgendaveis) {
+        console.error('Erro ao buscar serviços agendáveis:', errAgendaveis);
+        return [];
+    }
+    if (errEstaticos) {
+        console.error('Erro ao buscar serviços estáticos:', errEstaticos);
+        return [];
+    }
+
+    // Adiciona o tipo 'agendavel' para diferenciar na interface
+    const servicosAgendaveis = (agendaveis || []).map(s => ({
+        ...s,
+        tipo: 'agendavel' as const, // Força a tipagem correta
+    }));
+
+    // Mapeia os serviços estáticos, corrigindo o nome da coluna embed_url -> embedUrl
+    const servicosEstaticos = (estaticos || []).map(s => ({
+        id: s.id,
+        nome: s.nome,
+        descricao: s.descricao,
+        tipo: 'embed' as const,
+        embedUrl: s.embed_url, // Mapeamento explícito aqui!
+    }));
+
+    // Retorna a lista combinada e ordenada por nome
+    return [...servicosAgendaveis, ...servicosEstaticos].sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 export function getSlugServicoPorId(id: string): string {
