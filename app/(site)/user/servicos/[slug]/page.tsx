@@ -169,7 +169,7 @@ const ServicoEstatico = ({ servico }: { servico: ServicoDetalhado }) => {
     return (
         <div className="bg-white rounded shadow" style={{ height: '80vh' }}>
             <iframe
-                src={servico.embedUrl}
+                src={servico.embed_url}
                 title={servico.nome}
                 style={{ width: '100%', height: '100%' }}
                 allowFullScreen

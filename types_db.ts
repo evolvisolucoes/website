@@ -64,7 +64,7 @@ export type ServicosEstaticos = {
 	nome: string;
 	descricao: string;
 	tipo: 'embed';
-	embedUrl: string;
+	embed_url: string;
 };
 
 export type ServicoDetalhado = ServicosDisponiveis | ServicosEstaticos;
