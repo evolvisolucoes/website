@@ -16,7 +16,8 @@ export default function UsuarioLayout({ children }: { children: ReactNode }) {
 
         <div className="flex flex-col flex-1 min-h-screen min-w-0">
           <Header title="Contabilidade Automatizada" />
-          <main className="flex-grow p-8 overflow-auto">
+          {/* <main className="flex-grow p-8 overflow-auto"> */}
+		  <main className="flex-grow p-2 overflow-auto">
             {children}
           </main>
           <Footer />

@@ -3,7 +3,6 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-// MODIFICAÇÃO: Importe a nova função unificada e o tipo correto
 import {
   getUsuarioLogado,
   getTodosOsServicos,
@@ -11,10 +10,8 @@ import {
   getProximoAgendamentoServico,
 } from '@/lib/supabaseService';
 import { format } from 'date-fns';
-// MODIFICAÇÃO: Importe o tipo Agendamento e o novo tipo unificado ServicoDetalhado
 import { Agendamento, ServicoDetalhado } from 'types_db';
 
-// Componente para o card de serviço estático (sem informações de agendamento)
 function ServicoCardEstatico({ servico }: { servico: ServicoDetalhado }) {
   return (
     <div className="bg-white p-4 rounded shadow border flex flex-col justify-between">
@@ -32,7 +29,6 @@ function ServicoCardEstatico({ servico }: { servico: ServicoDetalhado }) {
   );
 }
 
-// Componente para o card de serviço agendável (código que você já tinha)
 function ServicoCardComAgendamento({ servico, userId }: { servico: ServicoDetalhado; userId: string }) {
     const [agendamento, setAgendamento] = useState<Agendamento | undefined>(undefined);
     const [loadingAgendamento, setLoadingAgendamento] = useState(true);
@@ -78,7 +74,6 @@ function ServicoCardComAgendamento({ servico, userId }: { servico: ServicoDetalh
 
 export default function ServicosPage() {
   const [usuario, setUsuario] = useState<any>(null);
-  // MODIFICAÇÃO: O estado agora usa o tipo unificado e foi renomeado para clareza
   const [servicosState, setServicosState] = useState<ServicoDetalhado[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,7 +83,6 @@ export default function ServicosPage() {
       const u = await getUsuarioLogado();
       if (u) {
         setUsuario(u);
-        // MODIFICAÇÃO: Chama a nova função que busca TODOS os serviços
         setServicosState(await getTodosOsServicos());
       }
       setLoading(false);
@@ -103,7 +97,6 @@ export default function ServicosPage() {
       <h1 className="text-2xl font-bold text-blue-700">📦 Serviços Disponíveis</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* MODIFICAÇÃO: Lógica para renderizar o card correto com base no tipo de serviço */}
         {servicosState.map((s) => {
           if (s.tipo === 'embed') {
             return <ServicoCardEstatico key={s.id} servico={s} />;

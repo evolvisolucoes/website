@@ -167,11 +167,11 @@ const ServicoEstatico = ({ servico }: { servico: ServicoDetalhado }) => {
     if (servico.tipo !== 'embed') return null;
 
     return (
-        <div className="bg-white p-4 rounded shadow" style={{ height: '80vh' }}>
+        <div className="bg-white rounded shadow" style={{ height: '80vh' }}>
             <iframe
                 src={servico.embedUrl}
                 title={servico.nome}
-                style={{ width: '100%', height: '100%', border: 'none' }}
+                style={{ width: '100%', height: '100%' }}
                 allowFullScreen
             />
         </div>
@@ -200,7 +200,7 @@ export default function ServicoDetalhePage() {
     if (!servico) return <p>Serviço não encontrado.</p>;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-2">
             <h1 className="text-2xl font-bold text-blue-700">🔧 {servico.nome}</h1>
             <p className="text-gray-600">{servico.descricao}</p>
             
